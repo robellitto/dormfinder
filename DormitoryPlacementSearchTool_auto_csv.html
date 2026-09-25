@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dormitory Placement Search</title>
+<style>
+  :root{
+    --bg:#eef2f7; --card:#fff; --ink:#0f172a; --muted:#64748b;
+    --line:#e2e8f0; --accent:#4f46e5; --accent2:#7c3aed;
+    --f:#db2777; --m:#2563eb;
+    --shadow:0 1px 2px rgba(15,23,42,.06), 0 8px 24px -8px rgba(15,23,42,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #ede9fe 0%, transparent 50%),
+      var(--bg);
+    color:var(--ink); min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+
+  header{
+    background:linear-gradient(120deg,#4f46e5 0%,#7c3aed 55%,#a855f7 100%);
+    color:#fff; padding:38px 20px 92px; position:relative; overflow:hidden;
+  }
+  header::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(600px 200px at 20% 120%, rgba(255,255,255,.18), transparent 60%),
+      radial-gradient(500px 200px at 90% -20%, rgba(255,255,255,.14), transparent 60%);
+  }
+  .head-inner{max-width:1100px;margin:0 auto;position:relative;z-index:2}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;
+    letter-spacing:.4px;font-size:13px;text-transform:uppercase;opacity:.85}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:#fff;
+    box-shadow:0 0 0 4px rgba(255,255,255,.25)}
+  h1{font-size:clamp(24px,4vw,38px);font-weight:800;margin-top:14px;letter-spacing:-.6px}
+  header p{margin-top:10px;opacity:.88;font-size:15px;max-width:640px;line-height:1.55}
+
+  main{max-width:1100px;margin:0 auto;padding:0 20px 70px}
+  .shell{margin-top:-52px;position:relative;z-index:5}
+
+
+  /* ---------- Status / Loaded bar ---------- */
+  .loaded{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:var(--card);border-radius:16px;padding:14px 18px;
+    box-shadow:var(--shadow);border:1px solid var(--line);
+  }
+  .loaded .ok{
+    width:34px;height:34px;border-radius:11px;flex:none;
+    display:flex;align-items:center;justify-content:center;
+    background:#dcfce7;color:#16a34a;font-size:16px;font-weight:800;
+  }
+  .loaded .txt{flex:1;min-width:180px}
+  .loaded .txt b{font-size:14px}
+  .loaded .txt small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .btn{
+    border:0;cursor:pointer;font-family:inherit;font-weight:600;font-size:13.5px;
+    padding:10px 16px;border-radius:11px;transition:.18s;
+  }
+  .btn-ghost{background:#f1f5f9;color:#475569}
+  .btn-ghost:hover{background:#e2e8f0;color:#0f172a}
+  .btn-primary{
+    background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;
+    box-shadow:0 8px 18px -8px rgba(79,70,229,.8);
+  }
+  .btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+
+  /* ---------- Search ---------- */
+  .search-box{
+    display:flex;align-items:center;gap:12px;margin-top:18px;
+    background:var(--card);border-radius:18px;padding:8px 10px 8px 18px;
+    box-shadow:0 18px 40px -18px rgba(15,23,42,.35), 0 1px 2px rgba(15,23,42,.06);
+    border:1px solid rgba(255,255,255,.7);transition:box-shadow .2s;
+  }
+  .search-box:focus-within{box-shadow:0 22px 50px -18px rgba(79,70,229,.5),0 0 0 4px rgba(79,70,229,.14)}
+  .search-box svg{flex:none;color:var(--muted)}
+  #search{flex:1;border:0;outline:0;background:transparent;font-size:17px;
+    font-family:inherit;color:var(--ink);padding:14px 0;min-width:0}
+  #search::placeholder{color:#94a3b8}
+  #clear{border:0;cursor:pointer;flex:none;width:38px;height:38px;border-radius:12px;
+    background:#f1f5f9;color:#64748b;font-size:16px;line-height:1;
+    display:none;align-items:center;justify-content:center;transition:.18s}
+  #clear:hover{background:#e2e8f0;color:#0f172a}
+  #clear.show{display:flex}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .chip{font-size:12.5px;font-weight:600;color:#475569;background:#fff;
+    border:1px solid var(--line);padding:7px 13px;border-radius:999px;
+    cursor:pointer;transition:.15s;user-select:none}
+  .chip:hover{border-color:#c7d2fe;color:var(--accent);background:#f5f3ff}
+
+  .stats{display:flex;flex-wrap:wrap;gap:22px;margin:22px 2px 6px;color:var(--muted);font-size:13.5px}
+  .stats b{color:var(--ink);font-weight:700}
+
+  .warn{
+    margin-top:14px;padding:12px 16px;border-radius:13px;
+    background:#fffbeb;border:1px solid #fde68a;color:#92400e;
+    font-size:13px;line-height:1.5;
+  }
+  .warn b{color:#78350f}
+
+  /* ---------- Results ---------- */
+  .section-title{display:flex;align-items:baseline;justify-content:space-between;
+    margin:22px 2px 14px;gap:12px;flex-wrap:wrap}
+  .section-title h2{font-size:15px;font-weight:700;letter-spacing:.2px}
+  .section-title span{font-size:13px;color:var(--muted)}
+
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+
+  .card{background:var(--card);border-radius:18px;border:1px solid var(--line);
+    box-shadow:var(--shadow);overflow:hidden;animation:pop .28s ease both}
+  @keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .card-top{display:flex;align-items:center;gap:14px;padding:18px 18px 16px;
+    background:linear-gradient(120deg,#f8fafc,#f1f5f9);border-bottom:1px solid var(--line)}
+  .avatar{flex:none;width:50px;height:50px;border-radius:15px;display:flex;
+    align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;
+    letter-spacing:.5px;background:linear-gradient(135deg,#6366f1,#a855f7);
+    box-shadow:0 8px 16px -8px rgba(99,102,241,.9)}
+  .avatar.f{background:linear-gradient(135deg,#ec4899,#f472b6);box-shadow:0 8px 16px -8px rgba(236,72,153,.9)}
+  .avatar.m{background:linear-gradient(135deg,#3b82f6,#06b6d4);box-shadow:0 8px 16px -8px rgba(59,130,246,.9)}
+  .who{min-width:0;flex:1}
+  .who h3{font-size:16.5px;font-weight:750;letter-spacing:-.2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who .sub{margin-top:4px;font-size:12.5px;color:var(--muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sex{flex:none;font-size:11px;font-weight:800;letter-spacing:.6px;padding:5px 10px;border-radius:8px}
+  .sex.f{background:#fce7f3;color:var(--f)}
+  .sex.m{background:#dbeafe;color:var(--m)}
+
+  .dup{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:800;
+    background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:6px;
+    vertical-align:middle;letter-spacing:.3px}
+
+  .rows{padding:14px 18px 4px;display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+  .row .lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;
+    color:#94a3b8;font-weight:700;margin-bottom:3px}
+  .row .val{font-size:13.8px;font-weight:600;color:#1e293b;word-break:break-word}
+  .row .val.mono{font-family:'SFMono-Regular',Consolas,monospace;letter-spacing:.3px}
+  .row.full{grid-column:1 / -1}
+
+  .highlight{margin:14px 18px 0;padding:12px 14px;border-radius:13px;
+    background:linear-gradient(120deg,#eef2ff,#f5f3ff);border:1px solid #e0e7ff;
+    display:flex;align-items:center;gap:12px}
+  .highlight .ic{font-size:18px}
+  .highlight .t{font-size:11px;text-transform:uppercase;letter-spacing:.8px;
+    color:#818cf8;font-weight:800}
+  .highlight .v{font-size:15px;font-weight:750;color:#3730a3;margin-top:1px}
+
+  .roommates{padding:16px 18px 18px}
+  .roommates .h{font-size:11px;text-transform:uppercase;letter-spacing:.8px;
+    color:#94a3b8;font-weight:800;margin-bottom:9px;
+    display:flex;justify-content:space-between}
+  .rm-list{display:flex;flex-wrap:wrap;gap:6px}
+  .rm{font-size:12px;font-weight:600;color:#475569;background:#f1f5f9;
+    border:1px solid #e2e8f0;padding:5px 10px;border-radius:8px;cursor:pointer;transition:.15s}
+  .rm:hover{background:#e0e7ff;border-color:#c7d2fe;color:var(--accent)}
+  .rm.me{background:#4f46e5;border-color:#4f46e5;color:#fff;cursor:default}
+  .rm.me:hover{background:#4f46e5;color:#fff}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted);
+    background:#fff;border:1px dashed var(--line);border-radius:18px}
+  .empty .emoji{font-size:40px;margin-bottom:14px;display:block}
+  .empty h3{color:var(--ink);font-size:17px;margin-bottom:6px}
+  .empty p{font-size:14px;line-height:1.6;max-width:420px;margin:0 auto}
+
+  footer{text-align:center;color:#94a3b8;font-size:12.5px;padding:34px 20px 44px}
+
+  .hidden{display:none !important}
+
+  @media (max-width:640px){
+    header{padding:28px 18px 84px}
+    .rows{grid-template-columns:1fr}
+    .grid{grid-template-columns:1fr}
+    .drop{padding:34px 18px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-inner">
+    <div class="brand"><span class="dot"></span> Student Housing Office</div>
+    <h1>Dormitory Placement Search</h1>
+    <p>Search students by <b>Student ID</b>, name, department, block or dorm. The placement CSV is loaded automatically from the same folder as this page.</p>
+  </div>
+</header>
+
+<main>
+  <div class="shell">
+
+    <!-- CSV is loaded automatically from the same folder as this HTML file -->
+    <div id="uploadPanel" class="loaded">
+      <div class="ok">↻</div>
+      <div class="txt">
+        <b id="loadingTitle">Loading student data…</b>
+        <small id="loadingSub">Reading the CSV file from this folder.</small>
+      </div>
+    </div>
+
+    <!-- Loaded bar -->
+    <div id="loadedPanel" class="loaded hidden">
+      <div class="ok">✓</div>
+      <div class="txt">
+        <b id="loadedTitle">Data loaded</b>
+        <small id="loadedSub"></small>
+      </div>
+    </div>
+
+    <!-- Search (hidden until loaded) -->
+    <div id="searchPanel" class="hidden">
+      <div class="search-box">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="search" type="text" placeholder="Enter Student ID, e.g. ETS0029/18" autocomplete="off" spellcheck="false">
+        <button id="clear" title="Clear">✕</button>
+      </div>
+      <div class="chips" id="quickChips"></div>
+      <div class="stats" id="stats"></div>
+      <div id="warnBox"></div>
+    </div>
+
+    <div class="section-title hidden" id="resHeader">
+      <h2 id="resTitle">Search Results</h2>
+      <span id="resCount"></span>
+    </div>
+
+    <div id="results"></div>
+  </div>
+</main>
+
+<footer>Data is read entirely in your browser — nothing is uploaded to any server.</footer>
+
+<script>
+/* =========================================================
+   CSV PARSER  (handles quoted fields, escaped quotes, \r\n)
+   ========================================================= */
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ','){ row.push(field); field = ''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let students = [];        // parsed records
+let rooms = {};           // block|dorm|sex -> [students]
+let dupIds = new Set();   // Student IDs that appear more than once
+let fileInfo = [];        // for the summary bar
+
+/* =========================================================
+   DOM
+   ========================================================= */
+const uploadPanel = document.getElementById('uploadPanel');
+const loadedPanel = document.getElementById('loadedPanel');
+const searchPanel = document.getElementById('searchPanel');
+const resHeader   = document.getElementById('resHeader');
+const loadedTitle = document.getElementById('loadedTitle');
+const loadedSub   = document.getElementById('loadedSub');
+const loadingTitle = document.getElementById('loadingTitle');
+const loadingSub   = document.getElementById('loadingSub');
+const input       = document.getElementById('search');
+const clearBtn    = document.getElementById('clear');
+const results     = document.getElementById('results');
+const resCount    = document.getElementById('resCount');
+const resTitle    = document.getElementById('resTitle');
+const statsEl     = document.getElementById('stats');
+const chipsEl     = document.getElementById('quickChips');
+const warnBox     = document.getElementById('warnBox');
+
+/* =========================================================
+   FILE HANDLING
+   =========================================================
+   Put the CSV in the same folder as this HTML file and set its
+   filename here. For example: students.csv
+   ========================================================= */
+const CSV_FILE = 'students.csv';
+
+async function loadCSV(){
+  try {
+    loadingTitle.textContent = 'Loading student data…';
+    loadingSub.textContent = `Reading ${CSV_FILE}`;
+
+    const response = await fetch(CSV_FILE, { cache: 'no-store' });
+
+    if(!response.ok){
+      throw new Error(`Could not find ${CSV_FILE} (HTTP ${response.status})`);
+    }
+
+    const text = await response.text();
+    const parsed = parseCSV(text);
+
+    if(!parsed.length){
+      throw new Error('The CSV file is empty.');
+    }
+
+    students = [];
+    fileInfo = [];
+
+    // Find header row (first row containing "Student ID")
+    let headerIdx = -1;
+    for(let i = 0; i < Math.min(parsed.length, 5); i++){
+      const joined = parsed[i].map(c => c.trim().toLowerCase()).join('|');
+      if(joined.includes('student id')){ headerIdx = i; break; }
+    }
+    if(headerIdx === -1) headerIdx = 0;
+
+    const header = parsed[headerIdx].map(h => h.trim().toLowerCase());
+    const idx = name => header.findIndex(h => h === name);
+
+    const col = {
+      id:     idx('student id'),
+      first:  idx('first name'),
+      father: idx('father name'),
+      g:      idx('gfather name'),
+      sex:    idx('sex'),
+      dept:   idx('department'),
+      block:  idx('block'),
+      dorm:   idx('dorm')
+    };
+
+    let added = 0;
+
+    for(let r = headerIdx + 1; r < parsed.length; r++){
+      const cells = parsed[r];
+      const get = k => (col[k] >= 0 ? (cells[col[k]] || '').trim() : '');
+      const id = get('id');
+      if(!id) continue;
+
+      students.push({
+        id,
+        first:  get('first'),
+        father: get('father'),
+        gfather:get('g'),
+        sex:    get('sex').toUpperCase(),
+        dept:   get('dept'),
+        block:  get('block'),
+        dorm:   get('dorm'),
+        full:   `${get('first')} ${get('father')} ${get('g')}`.trim(),
+        source: CSV_FILE
+      });
+      added++;
+    }
+
+    fileInfo.push({ name: CSV_FILE, count: added });
+
+    if(!students.length){
+      throw new Error('No student records found. Check that the CSV has a "Student ID" column.');
+    }
+
+    buildIndex();
+    showLoaded();
+
+  } catch(err) {
+    loadingTitle.textContent = 'Could not load the student data';
+    loadingSub.innerHTML =
+      `${escapeHtml(err.message)}<br>` +
+      `<span style="font-size:12px">Make sure the CSV filename matches <b>CSV_FILE</b> and the HTML + CSV are in the same folder. If you opened the HTML by double-clicking it, use a local web server instead.</span>`;
+
+    console.error(err);
+  }
+}
+
+/* =========================================================
+   INDEX + DUPLICATE DETECTION
+   ========================================================= */
+function buildIndex(){
+  rooms = {};
+  const idCount = {};
+  students.forEach(s => {
+    const key = `${s.block}|${s.dorm}|${s.sex}`;
+    (rooms[key] = rooms[key] || []).push(s);
+    idCount[s.id] = (idCount[s.id] || 0) + 1;
+  });
+  dupIds = new Set(Object.keys(idCount).filter(k => idCount[k] > 1));
+}
+
+/* =========================================================
+   SHOW LOADED STATE
+   ========================================================= */
+function showLoaded(){
+  uploadPanel.classList.add('hidden');
+  loadedPanel.classList.remove('hidden');
+  searchPanel.classList.remove('hidden');
+  resHeader.classList.remove('hidden');
+
+  const total = students.length;
+  loadedTitle.textContent = `${total.toLocaleString()} student record${total === 1 ? '' : 's'} loaded`;
+  loadedSub.textContent = fileInfo.map(f => `${f.name} · ${f.count} rows`).join('  •  ');
+
+  // stats
+  const depts = new Set(students.map(s => s.dept).filter(Boolean));
+  const roomSet = new Set(students.map(s => s.block + '|' + s.dorm));
+  const fem = students.filter(s => s.sex === 'F').length;
+  const mal = students.filter(s => s.sex === 'M').length;
+
+  statsEl.innerHTML = `
+    <div><b>${total.toLocaleString()}</b> students</div>
+    <div><b>${depts.size}</b> departments</div>
+    <div><b>${roomSet.size}</b> dorm rooms</div>
+    <div><b>${fem}</b> female &middot; <b>${mal}</b> male</div>
+  `;
+
+  // duplicate warning
+  if(dupIds.size){
+    warnBox.innerHTML = `<div class="warn">
+      <b>⚠ ${dupIds.size} duplicate Student ID${dupIds.size > 1 ? 's' : ''} detected in the source file.</b>
+      Affected records are marked with a “DUPLICATE” badge below.
+      This is a data-quality issue in the CSV itself — not in this tool.
+    </div>`;
+  } else {
+    warnBox.innerHTML = '';
+  }
+
+  // quick chips — top departments + blocks
+  chipsEl.innerHTML = '';
+  const deptCount = {};
+  students.forEach(s => { if(s.dept) deptCount[s.dept] = (deptCount[s.dept] || 0) + 1; });
+  const topDepts = Object.entries(deptCount).sort((a,b) => b[1]-a[1]).slice(0, 6).map(e => e[0]);
+  const blocks = [...new Set(students.map(s => s.block).filter(Boolean))].slice(0, 4);
+  [...topDepts, ...blocks].forEach(q => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = q;
+    b.onclick = () => { input.value = q; runSearch(); };
+    chipsEl.appendChild(b);
+  });
+
+  runSearch();
+  input.focus();
+}
+
+/* =========================================================
+   SEARCH + RENDER
+   ========================================================= */
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function initials(name){
+  const p = name.trim().split(/\s+/);
+  return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '?';
+}
+
+function runSearch(){
+  const q = input.value.trim().toUpperCase();
+  clearBtn.classList.toggle('show', q.length > 0);
+
+  if(!q){
+    resTitle.textContent = 'All students';
+    resCount.textContent = students.length.toLocaleString();
+    const LIMIT = 80;
+    const shown = students.slice(0, LIMIT);
+    results.innerHTML = `<div class="grid">${shown.map(renderCard).join('')}</div>` +
+      (students.length > LIMIT
+        ? `<p style="text-align:center;color:#94a3b8;font-size:13px;margin-top:18px">
+             Showing first ${LIMIT} of ${students.length.toLocaleString()} — type to narrow down.
+           </p>` : '');
+    wireChips();
+    return;
+  }
+
+  const found = students.filter(s =>
+    s.id.toUpperCase().includes(q) ||
+    s.full.toUpperCase().includes(q) ||
+    s.dept.toUpperCase().includes(q) ||
+    s.dorm.toUpperCase().includes(q) ||
+    s.block.toUpperCase().includes(q)
+  );
+
+  resTitle.textContent = `Results for “${input.value.trim()}”`;
+  resCount.textContent = found.length
+    ? `${found.length} match${found.length > 1 ? 'es' : ''}`
+    : '';
+
+  if(!found.length){
+    results.innerHTML = `
+      <div class="empty">
+        <span class="emoji">😕</span>
+        <h3>No student found</h3>
+        <p>Nothing matched <b>${escapeHtml(input.value.trim())}</b>. Try a shorter part of the ID.</p>
+      </div>`;
+    return;
+  }
+
+  const LIMIT = 80;
+  const shown = found.slice(0, LIMIT);
+  results.innerHTML = `<div class="grid">${shown.map(renderCard).join('')}</div>` +
+    (found.length > LIMIT
+      ? `<p style="text-align:center;color:#94a3b8;font-size:13px;margin-top:18px">
+           Showing first ${LIMIT} of ${found.length} — refine your search.
+         </p>` : '');
+  wireChips();
+}
+
+function wireChips(){
+  results.querySelectorAll('.rm[data-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      input.value = el.dataset.id;
+      runSearch();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+function renderCard(s){
+  const roommates = rooms[`${s.block}|${s.dorm}|${s.sex}`] || [];
+  const others = roommates.filter(r => !(r.id === s.id && r.dept === s.dept && r.block === s.block));
+
+  const rmHtml = others.length
+    ? others.map(r =>
+        `<span class="rm" data-id="${escapeHtml(r.id)}" title="${escapeHtml(r.id)}">${escapeHtml(r.first || r.id)}</span>`
+      ).join('')
+    : `<span style="font-size:12.5px;color:#94a3b8">No other students assigned to this room.</span>`;
+
+  const dupBadge = dupIds.has(s.id) ? `<span class="dup">DUPLICATE ID</span>` : '';
+  const sexClass = s.sex === 'F' ? 'f' : s.sex === 'M' ? 'm' : '';
+
+  return `
+  <article class="card">
+    <div class="card-top">
+      <div class="avatar ${sexClass}">${escapeHtml(initials(s.full || s.id))}</div>
+      <div class="who">
+        <h3>${escapeHtml(s.full || '(no name)')}${dupBadge}</h3>
+        <div class="sub">${escapeHtml(s.dept || '—')}</div>
+      </div>
+      ${s.sex ? `<span class="sex ${sexClass}">${escapeHtml(s.sex)}</span>` : ''}
+    </div>
+
+    <div class="rows">
+      <div class="row">
+        <div class="lab">Student ID</div>
+        <div class="val mono">${escapeHtml(s.id)}</div>
+      </div>
+      <div class="row">
+        <div class="lab">Sex</div>
+        <div class="val">${s.sex === 'F' ? 'Female' : s.sex === 'M' ? 'Male' : escapeHtml(s.sex || '—')}</div>
+      </div>
+      <div class="row full">
+        <div class="lab">Department</div>
+        <div class="val">${escapeHtml(s.dept || '—')}</div>
+      </div>
+      <div class="row">
+        <div class="lab">Father Name</div>
+        <div class="val">${escapeHtml(s.father || '—')}</div>
+      </div>
+      <div class="row">
+        <div class="lab">Grandfather Name</div>
+        <div class="val">${escapeHtml(s.gfather || '—')}</div>
+      </div>
+    </div>
+
+    <div class="highlight">
+      <span class="ic">🏠</span>
+      <div>
+        <div class="t">Assigned Room</div>
+        <div class="v">Block ${escapeHtml(s.block || '—')} &nbsp;·&nbsp; ${escapeHtml(s.dorm || '—')}</div>
+      </div>
+    </div>
+
+    <div class="roommates">
+      <div class="h"><span>Roommates</span><span>${others.length}</span></div>
+      <div class="rm-list">${rmHtml}</div>
+    </div>
+  </article>`;
+}
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+let timer;
+
+input.addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(runSearch, 130);
+});
+
+input.addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    clearTimeout(timer);
+    runSearch();
+  }
+});
+
+clearBtn.addEventListener('click', () => {
+  input.value = '';
+  input.focus();
+  runSearch();
+});
+
+// Automatically load the CSV when the page opens.
+loadCSV();
+</script>
+</body>
+</html>
